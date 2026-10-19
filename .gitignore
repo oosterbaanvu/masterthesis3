@@ -1,0 +1,28 @@
+# Python artifacts
+__pycache__/
+.pytest_cache/
+.venv/
+*.py[cod]
+.DS_Store
+
+# Financial datasets
+# - UCI original XLS (CC BY 4.0) is tracked: data/raw/uci/default_of_credit_card_clients.xls
+# - BAF (CC BY-NC-ND 4.0, Kaggle) stays local; never commit raw or modified copies.
+data/raw/baf/*
+!data/raw/baf/README.md
+data/raw/uci/*.zip
+
+# External benchmarks are fetched at pinned commits, not redistributed
+# (SEC-FinTables has no declared licence).
+data/external/*
+!data/external/README.md
+
+# Never commit local derivatives, corruption files, results or local manifests.
+data/processed/*
+!data/processed/README.md
+data/manifests/*.local.json
+results/
+*.zip
+*.parquet
+.env
+.env.*

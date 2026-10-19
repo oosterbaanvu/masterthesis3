@@ -1,0 +1,232 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[a4paper,top=21mm,bottom=21mm,left=25mm,right=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{tabularx,booktabs,array,longtable}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{lastpage}
+\usepackage{ragged2e}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{needspace}
+\definecolor{ink}{HTML}{183049}
+\definecolor{accent}{HTML}{216B80}
+\definecolor{muted}{HTML}{566776}
+\definecolor{rule}{HTML}{CAD4DC}
+\hypersetup{colorlinks=true,linkcolor=accent,urlcolor=accent,citecolor=accent,pdftitle={Evidence-Based Stress Testing of Data-Quality Controls for Financial Data Onboarding},pdfauthor={Tomash Oosterbaan}}
+\urlstyle{same}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\sffamily\footnotesize\color{muted} MSc Artificial Intelligence \quad/\quad Research proposal and feasibility findings}
+\fancyhead[R]{\sffamily\footnotesize\color{muted} October 2026}
+\fancyfoot[L]{\sffamily\footnotesize\color{muted} Financial data-quality evaluation}
+\fancyfoot[R]{\sffamily\footnotesize\color{muted} \thepage\ / \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.3pt}
+\renewcommand{\footrulewidth}{0pt}
+\setlength{\headheight}{14pt}
+\setcounter{secnumdepth}{2}
+\titleformat{\section}{\large\sffamily\bfseries\color{ink}}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\normalsize\sffamily\bfseries\color{accent}}{\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{15pt}{6pt}
+\titlespacing*{\subsection}{0pt}{10pt}{4pt}
+\setlist[itemize]{leftmargin=1.45em,topsep=2pt,itemsep=2pt,parsep=0pt}
+\setlist[enumerate]{leftmargin=1.5em,topsep=2pt,itemsep=2pt,parsep=0pt}
+\newcommand{\smallcap}[1]{{\sffamily\color{accent}\bfseries\footnotesize #1}}
+\newcommand{\note}[1]{{\color{muted}\footnotesize #1}}
+\newcommand{\rf}[1]{\textsuperscript{[#1]}}
+\newcommand{\sourceline}[1]{\par\vspace{2pt}{\footnotesize\color{muted}#1}\par}
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+\newcolumntype{P}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+\begin{document}
+\thispagestyle{empty}
+\vspace*{7mm}
+{\sffamily\small\bfseries\color{accent} MSC ARTIFICIAL INTELLIGENCE \quad | \quad RESEARCH PROPOSAL}\par
+\vspace{9mm}
+{\sffamily\fontsize{21}{25}\selectfont\bfseries\color{ink} Evidence-Based Stress Testing\\[3pt] of Data-Quality Controls\\[3pt] for Financial Data Onboarding}\par
+\vspace{5mm}
+{\sffamily\large\color{muted} Robustness and incremental value of learned cell-level error detection}\par
+\vspace{9mm}
+\noindent\color{rule}\rule{\linewidth}{0.7pt}\color{black}
+\vspace{4mm}
+\begin{tabularx}{\linewidth}{@{}P{30mm}Y@{}}
+\smallcap{AUTHOR} & Tomash Oosterbaan \\
+\smallcap{PROGRAMME} & MSc Artificial Intelligence, University of Groningen \\
+\smallcap{CONTEXT} & Graduation research in a financial-services data-engineering setting (Avanade / Rabobank) \\
+\smallcap{DATE} & 19 October 2026 \\
+\smallcap{DOCUMENT} & Revised proposal incorporating completed feasibility investigations; planned experiments remain subject to academic and industry review \\
+\end{tabularx}
+\vspace{5mm}
+\noindent\color{rule}\rule{\linewidth}{0.7pt}\color{black}
+\vspace{6mm}
+{\sffamily\bfseries\color{ink} Executive summary}\par
+\vspace{2mm}
+Onboarding a new financial data source requires more than checking whether data is present and correctly formatted. Existing SQL, business-rule and statistical controls can miss incorrect values that remain plausible and internally consistent. Learned cell-level detectors may provide complementary coverage, but can also produce a large number of additional alerts. The practical question is therefore not merely which model achieves the highest F1 score. It is whether a detector adds enough reliable coverage \emph{beyond} existing checks to justify adoption.
+
+Four exploratory investigations have established technical feasibility, examined dataset provenance and exposed weaknesses in the initial research design. A repeatable experiment pipeline was executed on synthetic errors, but selection across different error-placement mechanisms rarely changed the chosen detector. An initial apparent advantage of Conformal Data Cleaning (CDC) was measured against a weak rule baseline. Subsequent data analysis also showed that candidate financial benchmarks did not supply independent, trustworthy labels for real cell-level errors. These findings motivate a narrower and more defensible study.
+
+The proposed contribution is a reproducible method and a small engineering prototype for stress-testing established data-quality controls, quantifying the incremental detection and false-alarm burden of learned detectors, and assessing whether such estimates remain stable under changes in error type, error mechanism and data source. The result may legitimately be a recommendation to add no detector, or to collect more evidence. The intended contribution is decision support for financial-data onboarding, \emph{not} a production-ready system or a claim to know actual bank error rates.
+
+\vspace{4mm}
+{\sffamily\bfseries\color{ink} Status at submission}\par
+\vspace{1mm}
+{\footnotesize Completed exploratory investigations are documented below. The strong dbt baseline, its head-to-head CDC evaluation, and confirmatory experiments remain planned work.}\par
+\newpage
+
+\section{Practical motivation and research objective}
+A typical financial data-engineering team validates the schema, completeness, admissible values, relational integrity, business rules and statistical behaviour of incoming data. Tools such as dbt support repeatable SQL-based tests, including bespoke business assertions; Deequ can profile data and suggest constraints\rf{1,2}. These capabilities already address many common errors. A meaningful research problem cannot therefore be based on comparing a sophisticated AI detector with only null checks or simple outlier thresholds.
+
+The remaining challenge concerns \emph{plausible but incorrect} values. Examples include an amount changed to another normally occurring amount, a valid category that belongs to the wrong record, or an inconsistent value across related monthly fields. Such changes may satisfy schema and range checks. A learned detector that models relationships between columns could identify some of them, but may also flag legitimate unusual records. Data engineers must decide whether the additional findings justify the burden of review, maintenance and computation.
+
+This thesis investigates a decision-oriented evaluation procedure for a simulated financial-data onboarding workflow. It uses public or published synthetic datasets, explicitly documented assumptions and established checks. The research is not based on internal Rabobank data, does not imply access to production systems and does not claim that controlled corruptions reproduce unknown real-world banking error rates.
+
+\subsection{Relationship to prior work}
+CURED (Creating, Understanding, and Repairing Errors Demonstrator) combines error generation, analysis of error mechanisms and modern tabular cleaning methods in an interactive research demonstrator\rf{3}. The \texttt{tab\_err} framework and the distinction between ECAR, EAR and ENAR provide a foundation for controlled perturbations\rf{4}. CDC uses learned cross-column structure and uncertainty calibration for error detection and cleaning\rf{5}; LUCARIO provides another candidate approach to pattern anomalies\rf{6}.
+
+This project does \emph{not} propose CURED as a new detector or intend to rebuild its full application. CURED and its related tooling remain a technical starting point. The proposed extension is an \emph{evaluation and decision workflow}: execute realistic existing checks first, probe their blind spots, estimate the incremental detection value and uncertainty of optional learned methods, and produce an auditable recommendation. Model-selection strategies may be compared as secondary analyses; their superiority is not assumed.
+
+\section{Completed preliminary investigations and their implications}
+The preliminary work consists of exploratory experiments and dataset audits. The measurements below are \emph{feasibility evidence}, not confirmatory findings about production banking systems. Their purpose is to identify which parts of the initial research design are technically credible and where the research question must change.
+
+\subsection{Technical pilot: error mechanisms and detector selection}
+An end-to-end pilot used 6,000 sampled records from UCI Default of Credit Card Clients, split into 3,600 reference, 1,200 selection and 1,200 test records. Two synthetic corruptions were evaluated: a tenfold change to \texttt{BILL\_AMT1}, and substitution of \texttt{PAY\_0} payment-status codes. For each, 5\% and 10\% corruption were placed under ECAR, EAR and ENAR with matched realised error counts. Tested methods comprised a rule baseline, a CDC implementation used by CURED, an AISTATS CDC implementation and LUCARIO. Equal-budget selection using ECAR alone was compared with selection across all three mechanisms.
+
+The experiment produced 96 corrupted tables and 960 detector executions. A repeated run reproduced the results. CDC led the tested detectors for target-column F1 in both scenarios, but the two selection policies chose the same candidate in 15 of 18 comparisons; the worst reported selection regret was 0.013 F1. Thus the pilot established executable methodology, \emph{not} evidence that mechanism-aware selection materially improves decisions. Rankings among lower-performing candidates were sometimes sensitive to error mechanism, and retraining CDC with different seeds changed F1 by up to 0.13, motivating repetition and uncertainty estimation.
+
+A further concern was alert burden. On an unmodified test sample, CDC flagged 261/1,200 \texttt{AGE} and 202/1,200 \texttt{LIMIT\_BAL} cells. These are flags on untouched values rather than automatically verified real-world false positives, because the original dataset has not been proven error-free. Nevertheless, they show why target-column F1 alone can misrepresent operational usefulness.
+
+\subsection{Acquisition, software compatibility and provenance}
+The acquisition study retrieved and recorded 47 files from ten upstream repositories, documenting sources, commits and hashes. Six datasets completed a technical integration path covering injection and candidate methods; 180 of 182 steps succeeded. The two failures occurred when the CURED version of CDC encountered missing values. Other prerequisites were identified: some integer-valued features were treated as categories; several calibration sets were smaller than the 1,000 examples recommended by that implementation; and a seed-handling issue in a typo injector required a local correction.
+
+A subsequent study examined twelve datasets or versions and compared labels to underlying source files. It found that \emph{TableEG Credit} labelled existing missing values and some outliers as errors and used imputed values as proposed corrections, rather than independently verified original cell corrections. In \emph{TableEG Marketing}, labelled discrepancies were ordinary entries in the original survey data; this dataset was also not UCI Bank Marketing. Treating these labels as a financial benchmark would therefore lead to questionable conclusions. The Raha Flights benchmark offers independently documented errors, but its non-financial setting limits its relevance to banking claims.
+
+The cross-domain acquisitions remain useful evidence on method compatibility and data-provenance pitfalls. They do not justify expanding the final study to many unrelated domains merely to increase dataset count.
+
+\subsection{Financial value and dataset-feasibility study}
+The latest investigation narrowed the practical setting to financial source onboarding and assessed candidate datasets, attainable checks and possible errors that evade conventional controls. On UCI Credit, strict interpretations of documented payment-status codes would reject 66.9\% of cells in those fields, and approximately 1.2\% of records have an undocumented education code. This demonstrates that even apparently straightforward validation rules must be checked against the source's actual semantics before being treated as legitimate business constraints.
+
+A proposed contextual rule of the form ``bill amount no greater than 1.5 times credit limit'' identified approximately 62--65\% of an injected tenfold bill-amount corruption, versus approximately 7--19\% for a simpler numerical range check. This was an exploratory rule study, \emph{not} a completed dbt-versus-CDC evaluation; the domain validity and false-positive rate of this proposed rule have not been established. Conversely, tenfold changes in payment amounts lay beyond observed maxima in only about 0.3--2.2\% of cases, indicating that some meaningful numeric errors may remain hard to catch with ordinary range checks.
+
+The study also rejected AuditBench for the primary cell-level evaluation: only 166 of 1,484 assessed records provided the exact correspondence needed for that task, and much of its error structure involved missing or displaced financial-statement lines rather than corrupted cells in a regular relational table. BAF Base was identified as a promising second case because it has monthly batches, but its files, use conditions and error-generation suitability still require confirmation. Among the financial candidates assessed, no sufficiently verified independent benchmark of real, originally erroneous cells was established.
+
+\subsection{Reason for revising the original direction}
+Taken together, these results argue against making \emph{mechanism-aware detector selection} the central thesis claim. The selection policies were nearly indistinguishable in the initial pilot, an apparently strong learned detector was compared against inadequate conventional controls, and the lack of independently labelled financial errors constrains claims about real-world transfer. The more consequential open question is whether an evaluation based on controlled corruptions can produce \emph{reliable evidence of incremental value} after realistic baseline checks are accounted for. This shifts the study from choosing a winner by synthetic F1 toward testing the trustworthiness and utility of a recommendation.
+
+\section{Research question and expected contribution}
+\noindent\textbf{Primary research question}\par
+\vspace{2pt}
+\noindent\fcolorbox{rule}{white}{\parbox{0.943\linewidth}{\vspace{5pt}\textit{How robust are estimates of the incremental detection value and false-alarm burden of learned data-quality detectors beyond conventional data-quality checks under changing error types, error mechanisms, and data sources?}\vspace{5pt}}}
+
+\noindent The question is operationalised through four subquestions:
+\begin{enumerate}
+\item \textbf{Complementarity.} Which controlled non-trivial cell errors evade validated conventional checks, and how many of those errors do learned detectors additionally identify?
+\item \textbf{Sensitivity.} How strongly do estimated gains and additional alerts change with error operation, placement mechanism (ECAR/EAR/ENAR), rate and dataset characteristics?
+\item \textbf{Generalisation.} Do conclusions reached on selection scenarios remain supported on untouched records, unseen corruptions and a second financial data scenario?
+\item \textbf{Decision quality.} Under a fixed, transparent alert or review budget, when can the evidence support adding a detector, declining it or withholding a recommendation?
+\end{enumerate}
+
+The expected scientific contribution is an empirically evaluated protocol for \emph{incremental} detector assessment, including matched conventional baselines, explicit selection/test separation and uncertainty analysis. The expected engineering contribution is a small, reusable stress-testing and reporting service. Neither the usefulness of learned detectors nor any advantage of multi-mechanism selection is presumed.
+
+\section{Datasets, ground truth and validation boundaries}
+\begin{tabularx}{\linewidth}{@{}P{38mm}P{32mm}Y@{}}
+\toprule
+\textbf{Candidate} & \textbf{Research role} & \textbf{Qualification / status} \\
+\midrule
+UCI Default of Credit Card Clients & Primary controlled financial study & 30,000 records; payment and balance history across fields. No row-level time axis; contains non-standard codes and has no verified original cell-error labels. \\
+BAF Base (Feedzai) & Conditional second financial case & Published synthetic application data with month indicator. Supports later-batch testing; original fraud label is \emph{not} a cell-error label. Source files, licence and feature semantics need confirmation. \\
+Raha Flights & Optional external validity control & Independently documented errors, but non-financial and not representative evidence for banking operations. \\
+UCI Bank Marketing & Reserve only & Used only if a specific limitation remains untestable with the main cases; not equivalent to TableEG Marketing. \\
+TableEG Credit / Marketing; AuditBench & Excluded from primary error-label evaluation & Ground-truth provenance or cell-correspondence problems identified in preliminary studies. \\
+\bottomrule
+\end{tabularx}
+
+For synthetic experiments, a controlled change to a previously unaltered cell provides a known \emph{injected-error} label; it does not establish whether the original cell was correct. Primary claims will be limited to recovery of intentionally modified values and the burden of flags on values that were not modified. Independently adjudicated records are needed before flags on the untouched original data can be interpreted as genuine errors or genuine false positives. Published independently labelled non-financial data can test implementation generality, but cannot close the financial-ground-truth gap.
+
+All datasets will be accompanied by acquisition information, source revision, checksum, documented admissible use, column semantics and a declared experimental role. Only a small, justified subset will enter confirmatory experiments. No private banking data are required.
+
+\section{Proposed experimental method}
+\subsection{Conventional controls as the operational starting point}
+A dbt-core and DuckDB setup will execute applicable \texttt{not\_null}, \texttt{unique}, \texttt{accepted\_values}, relationship and custom SQL tests, complemented by justified schema, cross-field, distribution and consistency checks. Check definitions must be based on public documentation, reference partitions and reviewed assumptions rather than on final-test corruption labels. Deequ's profiling and suggested constraints will be examined where it adds distinct capability, without double-counting equivalent checks as independent algorithms.
+
+Checks will be evaluated at their natural scope. A SQL test identifying violating rows can contribute to record-level alerts, but a table-level drift warning cannot automatically be assigned a cell-level F1. Where business assumptions are uncertain, alternative defensible rule configurations and their failure rates on unmodified reference data will be reported.
+
+\subsection{Controlled errors and detection candidates}
+Error operations will be chosen according to field semantics and verified eligibility, prioritising in-range incorrect amounts, valid-but-wrong categories and contextual or time-field inconsistencies. Obvious invalid codes, nulls and extreme outliers serve mainly as baseline sanity checks. For a given column, corruption and realised count, ECAR changes cells independently of observed values, EAR conditions placement on another observed feature, and ENAR conditions placement on the original feature value. Error \emph{type} and \emph{location mechanism} will therefore be varied separately where valid\rf{4}.
+
+Start with 5\% and 10\% corruption on pre-specified eligible cells. Preserve the unchanged source table, log attempted and realised edits, store seeds and eligibility rules, and use repeated runs to characterise variance. The design should not favour a particular detector through hand-picked error operations.
+
+CDC is the principal learned candidate for the initial value test, with both the CURED-used implementation and the published AISTATS implementation treated as documented alternatives rather than silently conflated. LUCARIO or another applicable detector may be retained only after its prerequisites and evaluation scope have been verified. Candidate adapters must declare missing-value handling, feature types, reference and calibration requirements, labelled examples, thresholds and computational dependencies. Models needing substantially different training or annotation budgets will not be described as like-for-like alternatives.
+
+\subsection{Separation of selection and final evaluation}
+The initial split convention is reference (60\%), selection (20\%) and final test (20\%), with group-aware splits where repeated entities exist. The UCI credit table has no meaningful chronological sequence between rows. For BAF, a later-month batch test is preferred if the dataset becomes available and passes intake. Models, conventional rules and alert thresholds are fitted or specified without accessing final labels. Any strategy for selecting or declining a learned detector is fixed before the final test.
+
+The confirmatory test will combine new rows and corruption seeds with pre-defined shifts in error type, mechanism or rate. Selection based on one mechanism may be compared with multi-scenario selection as a \emph{secondary} question, using equal budgets. A fixed candidate and a conventional-check-only policy serve as essential comparators. Results on deliberately synthetic scenarios will not be presented as estimates of unidentified production error prevalence.
+
+\subsection{Evaluation measures and uncertainty}
+The principal quantity is the number and proportion of \emph{injected erroneous cells missed by conventional checks but recovered by the learned method}. This incremental gain will be reported alongside additional alerts on unchanged cells, flagged records per 1,000 assessed records, alert precision relative to the injection labels, and estimated review load under a stated budget. Target-column and whole-table outcomes will be reported separately. Cell-level precision, recall and F1 are supporting measures where the ground truth and output granularity make them meaningful.
+
+Repeated seeds will supply confidence intervals or bootstrap uncertainty, and the study will report stability of detector rankings and of add/no-add decisions. The analysis will examine whether apparent gains disappear when strong business rules, held-out error operations or stricter alert budgets are applied. Runtime and resource demand will be recorded, but review time will be labelled as a proxy unless measured with actual users.
+
+\section{Engineering artefact and practical demonstration}
+The proposed artefact is a compact \emph{Data Quality Stress-Testing and Recommendation Service}. It consists of:
+\begin{enumerate}
+\item a dataset intake and profiling module that checks schema, provenance, semantics and reference suitability;
+\item a documented scenario specification for eligible non-trivial corruptions and location mechanisms;
+\item a deterministic error-generation runner with seeds, original-value preservation and manifests;
+\item adapters for established dbt / SQL checks and a small number of learned detectors;
+\item an evaluation component that measures incremental detections, additional alerts, uncertainty and costs;
+\item a machine-readable and human-readable decision report, including its evidence and limitations.
+\end{enumerate}
+
+A demonstration will simulate onboarding a new financial source or batch. An engineer supplies available checks and reviews column semantics; the tool shows which controlled errors are caught, which are missed, whether a learned detector fills part of the gap, and what alert burden accompanies the improvement. Its recommendation may be \emph{add a detector}, \emph{do not add a detector}, or \emph{insufficient evidence}. The decision is advisory, not automated deployment.
+
+The deliverable will prioritise tested, reusable modules and a readable report over a large web interface. Direct bank integration, automated repair, production monitoring, access to internal bank datasets and claims of production readiness are outside scope. The prototype is intended to be transferable in structure, even when its experimental results do not directly transfer to a new bank data source.
+
+\section{Work plan, decision points and expected outputs}
+\begin{tabularx}{\linewidth}{@{}P{23mm}Y@{}}
+\toprule
+\textbf{Stage} & \textbf{Deliverable and acceptance condition} \\
+\midrule
+1. Strong baseline & Implement dbt-based controls on UCI Credit; audit rule semantics and the frequency of failures on untouched reference data. No learned-detector value claim before this stage. \\
+2. Incremental-value pilot & Re-evaluate CDC against the strong controls on a small pre-specified set of realistic corruptions; measure extra detections and additional flags at explicit alert budgets. \\
+\emph{Decision gate} & Continue with an ML-recommendation study only if the comparison reveals a substantive, interpretable gap and credible evaluation is feasible. Otherwise narrow to reliability of stress testing or revise the research problem jointly with supervisors. \\
+3. Confirmatory study & Freeze scenarios, splits and budgets; repeat with multiple seeds, held-out operations and a second financial case if cleared. Include a valid independent benchmark only within its demonstrated scope. \\
+4. Prototype and report & Integrate stable adapters and produce reproducible evaluation, decision reports, limitations, and research findings. \\
+\bottomrule
+\end{tabularx}
+
+The intended outputs are: a revised research protocol, versioned evaluation software, a reproducibility manifest, a documented financial onboarding demonstration and a thesis analysing both positive and negative results. The first immediate task is Stage 1; the stronger dbt baseline and corresponding CDC comparison have \emph{not yet been executed}.
+
+\section{Limitations and research integrity}
+The main limitation is the absence, among the financial candidates investigated, of a sufficiently verified independent benchmark of original real-world erroneous cells. Consequently the experiments can assess controlled robustness and complementary detection, but not predict the unknown rate or cost of errors in Rabobank systems. Synthetic corruption design may itself bias outcomes; this risk will be tested through varied operations, mechanisms and untouched held-out data rather than obscured. Similarly, any apparent ``false positive'' on a non-injected cell is an alert on an unmodified original value unless that value is independently adjudicated.
+
+Financial-domain business rules must be reviewed rather than inferred solely from statistical patterns. The eligibility, licence and redistribution constraints of all source datasets will be recorded before use; BAF remains conditional on those checks. Negative findings, unsupported methods, failures to generalise and decisions to recommend no learned model are valid research outcomes. The central claim is therefore deliberately bounded: \emph{a reproducible and transparent way to evaluate proposed additional data-quality controls}, not a universal AI detector selector.
+
+\section*{References and supporting research evidence}
+\addcontentsline{toc}{section}{References and supporting research evidence}
+\begingroup\small
+\setlength{\parskip}{3pt}
+\noindent [1] dbt Labs. \emph{Add data tests to your DAG}. \url{https://docs.getdbt.com/docs/build/data-tests}.\par
+\noindent [2] Schelter et al. (2018). \emph{Automating Large-Scale Data Quality Verification}. PVLDB. Deequ: \url{https://github.com/awslabs/deequ}.\par
+\noindent [3] Chandler et al. (2026). \emph{CURED: Creating, Understanding, and Repairing Errors Demonstrator}. \url{https://arxiv.org/abs/2607.20140}.\par
+\noindent [4] Jung et al. (2025). \emph{Towards Realistic Error Models for Tabular Data}. Journal of Data and Information Quality. \url{https://doi.org/10.1145/3774914}.\par
+\noindent [5] J\"ager and Biessmann (2024). \emph{From Data Imputation to Data Cleaning}. AISTATS/PMLR. \url{https://proceedings.mlr.press/v238/jager24a.html}.\par
+\noindent [6] Qin et al. (2026). \emph{Unsupervised, Robust, and Lightweight Detection of Data Pattern Anomalies and Outliers}. \url{https://doi.org/10.1016/j.infsof.2026.108035}.\par
+\noindent [7] Yeh. \emph{Default of Credit Card Clients}. UCI Machine Learning Repository. \url{https://doi.org/10.24432/C55S3H}.\par
+\noindent [8] Jesus et al. (2022). \emph{Turning the Tables: Biased, Imbalanced, Dynamic Tabular Datasets for ML Evaluation}. NeurIPS. \url{https://github.com/feedzai/bank-account-fraud}.\par
+\noindent [9] AuditBench benchmark repository. \href{https://github.com/Oppugno-Rushi/AuditBench-Benchmarking-LLMs-for-Financial-Auditing}{AuditBench repository}.\par
+\noindent [10] TableEG research repository. \url{https://github.com/viviancircle/TableEG}.\\[3pt]
+\noindent\textbf{Internal preliminary reports supporting the findings above}\par
+\noindent Technical pilot (18 October 2026): \texttt{results/pilot/report.md}.\\
+Dataset acquisition (18 October 2026): \texttt{docs/dataset\_acquisition.md}.\\
+Data and provenance study (19 October 2026): \texttt{docs/data\_study.md}.\\
+Financial source and value feasibility (19 October 2026): \texttt{reports/value\_pilot/00\_data\_and\_use\_case.md}.\\
+\emph{These are exploratory project reports; final scientific claims will be based on the preregistered confirmatory experiments.}
+\endgroup
+\end{document}
